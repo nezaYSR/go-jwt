@@ -3,11 +3,12 @@ package controllers
 import (
 	"context"
 	"fmt"
-	helper "golang-jwt/helpers"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	helper "gitlab.com/nezaysr/golang-jwt/helpers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

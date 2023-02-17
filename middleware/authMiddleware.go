@@ -2,8 +2,9 @@ package middleware
 
 import (
 	"fmt"
-	helper "golang-jwt/helpers"
 	"net/http"
+
+	helper "gitlab.com/nezaysr/golang-jwt/helpers"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	routes "golang-jwt/routes/"
+	routes "gitlab.com/nezaysr/golang-jwt/routes"
 
 	"github.com/gin-gonic/gin"
 )

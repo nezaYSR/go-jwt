@@ -4,37 +4,35 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"gitlab.com/nezaysr/golang-jwt/database"
+	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type SignedDetails struct {
-	Email     string
-	FirstName string
-	LastName  string
-	Uid       string
-	UserType  string
+	Email      string
+	First_name string
+	Last_name  string
+	Uid        string
+	User_type  string
 	jwt.StandardClaims
 }
 
-var userCollection *mongo.Collection = database.OpenCollection(database.Client, "User")
-
-var SECRET_KEY string = os.Getenv("JWT_SECRET_KEY")
+var SECRET_KEY []byte = []byte(os.Getenv("JWT_SECRET_KEY"))
 
 func GenerateAllTokens(email string, firstName string, lastName string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
 	claims := &SignedDetails{
-		Email:     email,
-		FirstName: firstName,
-		LastName:  lastName,
-		Uid:       uid,
-		UserType:  userType,
+		Email:      email,
+		First_name: firstName,
+		Last_name:  lastName,
+		Uid:        uid,
+		User_type:  userType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
@@ -46,11 +44,11 @@ func GenerateAllTokens(email string, firstName string, lastName string, userType
 		},
 	}
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodES256, claims).SignedString([]byte(SECRET_KEY))
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodES256, refreshClaims).SignedString([]byte(SECRET_KEY))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(SECRET_KEY)
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(SECRET_KEY)
 
 	if err != nil {
-		log.Panic(err)
+		log.Println("Error generating token:", err)
 		return
 	}
 
@@ -65,11 +63,6 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 			return []byte(SECRET_KEY), nil
 		},
 	)
-
-	if err != nil {
-		msg = err.Error()
-		return
-	}
 
 	claims, ok := token.Claims.(*SignedDetails)
 	if !ok {
@@ -87,7 +80,7 @@ func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 	return claims, msg
 }
 
-func UpdateAllTokens(signedToken string, signedRefreshToken string, _userId string) {
+func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
 	var updateObj primitive.D
@@ -95,12 +88,12 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, _userId stri
 	updateObj = append(updateObj, bson.E{"token", signedToken})
 	updateObj = append(updateObj, bson.E{"refreshtoken", signedRefreshToken})
 
-	UpdatedAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
-	updateObj = append(updateObj, bson.E{"updatedAt", UpdatedAt})
+	updateObj = append(updateObj, bson.E{"updated_at", Updated_at})
 
 	upsert := true
-	filter := bson.M{"_userId": _userId}
+	filter := bson.M{"user_id": userId}
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
@@ -120,4 +113,43 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, _userId stri
 		return
 	}
 	return
+}
+
+func WipeoutAllFuckingField(c *gin.Context, token string) error {
+	var ctx, _ = context.WithTimeout(context.Background(), 100*time.Second)
+	tokenFound, err := jwt.ParseWithClaims(
+		token,
+		&SignedDetails{},
+		func(t *jwt.Token) (interface{}, error) {
+			return []byte(SECRET_KEY), nil
+		},
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return err
+	}
+
+	claims, ok := tokenFound.Claims.(*SignedDetails)
+
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return err
+	}
+
+	filter := bson.M{"user_id": claims.Uid}
+	update := bson.M{"$set": bson.M{"token": nil, "refresh_token": nil}}
+
+	result, err := userCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return err
+	}
+
+	return nil
 }

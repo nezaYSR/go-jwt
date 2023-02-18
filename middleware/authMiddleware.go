@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -28,11 +29,18 @@ func Authenticate() gin.HandlerFunc {
 		}
 
 		c.Set("email", claims.Email)
-		c.Set("firstName", claims.FirstName)
-		c.Set("lastName", claims.LastName)
+		c.Set("first_name", claims.First_name)
+		c.Set("last_name", claims.Last_name)
 		c.Set("uid", claims.Uid)
-		c.Set("userType", claims.UserType)
+		c.Set("user_type", claims.User_type)
 		c.Next()
 
 	}
+}
+
+func InvalidateToken(token string) error {
+	if token == "" {
+		return errors.New("token not found")
+	}
+	return nil
 }

@@ -4,10 +4,14 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.com/nezaysr/golang-jwt/database"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
+
 func CheckUserType(c *gin.Context, role string) (err error) {
-	userType := c.GetString("userType")
+	userType := c.GetString("user_type")
 	err = nil
 	if userType != role {
 		err = errors.New("Unauthorized to access this resource")
@@ -16,12 +20,12 @@ func CheckUserType(c *gin.Context, role string) (err error) {
 	return err
 }
 
-func MatchUserTypeToUid(c *gin.Context, _userId string) (err error) {
-	userType := c.GetString("userType")
+func MatchUserTypeToUid(c *gin.Context, user_id string) (err error) {
+	userType := c.GetString("user_type")
 	uid := c.GetString("uid")
 
 	err = nil
-	if userType == "USER" && uid != _userId {
+	if userType == "USER" && uid != user_id {
 		err = errors.New("Unauthorized to access this resource")
 		return err
 	}

@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    networks:
+      - golang-jwt
+  mongodb:
+    container_name: mongodb
+    image: mongo
+    restart: always
+    ports:
+      - '27017:27017'
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data/db
+    networks:
+        - golang-jwt
+
+networks:
+  golang-jwt:
+    name: network
+    driver: bridge

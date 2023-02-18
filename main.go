@@ -25,14 +25,14 @@ func main() {
 	store := cookie.NewStore([]byte(secret))
 	router.Use(sessions.Sessions("session", store))
 
-	routes.AuthRoutes(router)
-	routes.UserRoutes(router)
-
 	router.GET("/api-1", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"success": "Access granted for api-1",
+			"success": "hello this suppose to be fine!",
 		})
 	})
+
+	routes.AuthRoutes(router)
+	routes.UserRoutes(router)
 
 	router.GET("/api-2", func(c *gin.Context) {
 		c.JSON(200, gin.H{

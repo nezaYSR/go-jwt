@@ -5,11 +5,14 @@ import (
 
 	routes "gitlab.com/nezaysr/golang-jwt/routes"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	port := os.Getenv("PORT")
+	secret := os.Getenv("SECRET_KEY")
 
 	if port == "" {
 		port = "8000"
@@ -17,6 +20,10 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger())
+
+	// Use the cookie store for sessions
+	store := cookie.NewStore([]byte(secret))
+	router.Use(sessions.Sessions("session", store))
 
 	routes.AuthRoutes(router)
 	routes.UserRoutes(router)
